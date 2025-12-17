@@ -152,70 +152,123 @@
   </section>
 
   <footer>Made by Sonal Shaktawat</footer>
+<script>
+  const apiKey = "b650ff8f"; // Your OMDb API key
 
-  <script>
-    const apiKey = "b650ff8f"; // ✅ Your OMDb API Key
+  // 🔍 Search movies
+  async function searchMovies() {
+    const query = document.getElementById("searchInput").value;
+    if (!query) return;
 
-    async function searchMovies() {
-      const query = document.getElementById("searchInput").value;
-      if (!query) return;
+    const response = await fetch(
+      `https://www.omdbapi.com/?s=${query}&type=movie&apikey=${apiKey}`
+    );
+    const data = await response.json();
 
-      const response = await fetch(`https://www.omdbapi.com/?s=${query}&apikey=${apiKey}`);
-      const data = await response.json();
+    const moviesDiv = document.getElementById("movies");
+    moviesDiv.innerHTML = "";
 
-      const moviesDiv = document.getElementById("movies");
-      moviesDiv.innerHTML = "";
+    if (data.Search) {
+      data.Search.forEach(movie => {
+        const movieEl = document.createElement("div");
+        movieEl.classList.add("movie");
 
-      if (data.Search) {
-        data.Search.forEach(movie => {
-          const movieEl = document.createElement("div");
-          movieEl.classList.add("movie");
-          movieEl.innerHTML = `
-            <img src="${movie.Poster !== "N/A" ? movie.Poster : "https://via.placeholder.com/200x300"}" alt="${movie.Title}">
-            <h3>${movie.Title}</h3>
-            <p>${movie.Year}</p>
-            <div class="btn" onclick="addToList('${movie.imdbID}', '${movie.Title}', '${movie.Poster}')">+ My List</div>
+        movieEl.innerHTML = `
+          <img src="${movie.Poster !== "N/A" ? movie.Poster : "https://via.placeholder.com/200x300"}">
+          <h3>${movie.Title}</h3>
+          <p>${movie.Year}</p>
+          <div class="btn" onclick="addToList('${movie.imdbID}', '${movie.Title}', '${movie.Poster}'); recommendMovies('${movie.imdbID}')">
+            + My List
+          </div>
+        `;
+
+        moviesDiv.appendChild(movieEl);
+      });
+    } else {
+      moviesDiv.innerHTML = "<p>No movies found.</p>";
+    }
+  }
+
+  // 🎬 Fetch full movie details
+  async function getMovieDetails(imdbID) {
+    const res = await fetch(
+      `https://www.omdbapi.com/?i=${imdbID}&apikey=${apiKey}`
+    );
+    return await res.json();
+  }
+
+  // 🤖 Recommend similar movies (CONTENT-BASED)
+  async function recommendMovies(imdbID) {
+    const movie = await getMovieDetails(imdbID);
+    if (!movie.Genre) return;
+
+    const mainGenre = movie.Genre.split(",")[0];
+
+    const response = await fetch(
+      `https://www.omdbapi.com/?s=${mainGenre}&type=movie&apikey=${apiKey}`
+    );
+    const data = await response.json();
+
+    const recDiv = document.getElementById("recommendations");
+    recDiv.innerHTML = `<h2>Because you liked "${movie.Title}"</h2>`;
+
+    if (data.Search) {
+      data.Search
+        .filter(rec => rec.imdbID !== imdbID)
+        .slice(0, 5)
+        .forEach(rec => {
+          recDiv.innerHTML += `
+            <div class="movie">
+              <img src="${rec.Poster !== "N/A" ? rec.Poster : "https://via.placeholder.com/200x300"}">
+              <h4>${rec.Title}</h4>
+            </div>
           `;
-          moviesDiv.appendChild(movieEl);
         });
-      } else {
-        moviesDiv.innerHTML = "<p>No movies found.</p>";
-      }
     }
+  }
 
-    function addToList(id, title, poster) {
-      let saved = JSON.parse(localStorage.getItem("myList")) || [];
-      if (!saved.some(movie => movie.id === id)) {
-        saved.push({ id, title, poster });
-        localStorage.setItem("myList", JSON.stringify(saved));
-        renderMyList();
-      }
-    }
-
-    function removeFromList(id) {
-      let saved = JSON.parse(localStorage.getItem("myList")) || [];
-      saved = saved.filter(movie => movie.id !== id);
+  // ⭐ Add to My List
+  function addToList(id, title, poster) {
+    let saved = JSON.parse(localStorage.getItem("myList")) || [];
+    if (!saved.some(movie => movie.id === id)) {
+      saved.push({ id, title, poster });
       localStorage.setItem("myList", JSON.stringify(saved));
       renderMyList();
     }
+  }
 
-    function renderMyList() {
-      const savedMovies = JSON.parse(localStorage.getItem("myList")) || [];
-      const savedDiv = document.getElementById("savedMovies");
-      savedDiv.innerHTML = "";
-      savedMovies.forEach(movie => {
-        const movieEl = document.createElement("div");
-        movieEl.classList.add("movie");
-        movieEl.innerHTML = `
-          <img src="${movie.poster}" alt="${movie.title}">
-          <h3>${movie.title}</h3>
-          <div class="btn" onclick="removeFromList('${movie.id}')">❌ Remove</div>
-        `;
-        savedDiv.appendChild(movieEl);
-      });
-    }
+  // ❌ Remove from list
+  function removeFromList(id) {
+    let saved = JSON.parse(localStorage.getItem("myList")) || [];
+    saved = saved.filter(movie => movie.id !== id);
+    localStorage.setItem("myList", JSON.stringify(saved));
+    renderMyList();
+  }
 
-    window.onload = renderMyList;
-  </script>
+  // 📂 Render My List
+  function renderMyList() {
+    const savedMovies = JSON.parse(localStorage.getItem("myList")) || [];
+    const savedDiv = document.getElementById("savedMovies");
+    savedDiv.innerHTML = "";
+
+    savedMovies.forEach(movie => {
+      const movieEl = document.createElement("div");
+      movieEl.classList.add("movie");
+
+      movieEl.innerHTML = `
+        <img src="${movie.poster}">
+        <h3>${movie.title}</h3>
+        <div class="btn" onclick="removeFromList('${movie.id}')">❌ Remove</div>
+      `;
+
+      savedDiv.appendChild(movieEl);
+    });
+  }
+
+  window.onload = renderMyList;
+</script>
+
 </body>
 </html>
+
+      
